@@ -20,9 +20,8 @@ const timelineRef = ref<InstanceType<typeof TimelineContainer> | null>(null);
 const riskSidebarVisible = ref(true);
 
 const riskDetection = useRiskDetection(
-  props.timelineStore.timelineNodes.value,
-  props.timelineStore.lectureInfo,
-  (id) => props.timelineStore.timelineNodes.value.find(n => n.id === id)
+  () => props.timelineStore.timelineNodes.value,
+  () => props.timelineStore.lectureInfo
 );
 
 const risks = computed(() => riskDetection.risks.value);

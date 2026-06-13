@@ -6,41 +6,45 @@ import { parseTimeToMinutes, getEndTime, isTimeOverlap, getTimeGap } from '@/uti
 const PERSON_GAP_THRESHOLD = 10;
 
 export function useRiskDetection(
-  nodes: TimelineNode[],
-  lectureInfo: LectureInfo,
-  _getNodeById?: (id: string) => TimelineNode | undefined
+  getNodes: () => TimelineNode[],
+  getLectureInfo: () => LectureInfo
 ) {
   const risks = computed<RiskAlert[]>(() => {
+    const nodes = getNodes();
+    const lectureInfo = getLectureInfo();
     const alerts: RiskAlert[] = [];
     const sortedByOrder = [...nodes].sort((a, b) => a.sortOrder - b.sortOrder);
-    const sortedByTime = [...nodes].sort((a, b) => 
+    const sortedByTime = [...nodes].sort((a, b) =>
       parseTimeToMinutes(a.startTime) - parseTimeToMinutes(b.startTime)
     );
 
     const seen = new Set<string>();
 
     function addAlert(alert: Omit<RiskAlert, 'id'>) {
-      const key = `${alert.type}-${alert.relatedNodeIds.sort().join(',')}`;
+      const key = `${alert.type}-${alert.relatedNodeIds.slice().sort().join(',')}`;
       if (!seen.has(key)) {
         seen.add(key);
         alerts.push({ ...alert, id: generateUUID() });
       }
     }
 
-    for (let i = 0; i < sortedByOrder.length - 1; i++) {
-      const current = sortedByOrder[i];
-      const next = sortedByOrder[i + 1];
-      
-      const currentEnd = getEndTime(current);
-      const nextStart = next.startTime;
-      
-      if (isTimeOverlap(current.startTime, currentEnd, nextStart, getEndTime(next))) {
-        addAlert({
-          type: 'time_overlap',
-          message: `「${current.name}」与「${next.name}」时间重叠`,
-          relatedNodeIds: [current.id, next.id],
-          severity: 'error',
-        });
+    for (let i = 0; i < sortedByTime.length; i++) {
+      for (let j = i + 1; j < sortedByTime.length; j++) {
+        const a = sortedByTime[i];
+        const b = sortedByTime[j];
+        const aEnd = getEndTime(a);
+        const bStart = b.startTime;
+        if (parseTimeToMinutes(bStart) >= parseTimeToMinutes(aEnd)) {
+          break;
+        }
+        if (isTimeOverlap(a.startTime, aEnd, bStart, getEndTime(b))) {
+          addAlert({
+            type: 'time_overlap',
+            message: `「${a.name}」与「${b.name}」时间重叠`,
+            relatedNodeIds: [a.id, b.id],
+            severity: 'error',
+          });
+        }
       }
     }
 
@@ -59,7 +63,14 @@ export function useRiskDetection(
         const current = tasks[i];
         const next = tasks[i + 1];
         const gap = getTimeGap(getEndTime(current), next.startTime);
-        if (gap < PERSON_GAP_THRESHOLD) {
+        if (gap < 0) {
+          addAlert({
+            type: 'person_overload',
+            message: `「${person}」在「${current.name}」与「${next.name}」期间任务时间重叠，存在冲突`,
+            relatedNodeIds: [current.id, next.id],
+            severity: 'error',
+          });
+        } else if (gap < PERSON_GAP_THRESHOLD) {
           addAlert({
             type: 'person_overload',
             message: `「${person}」连续任务间隔仅 ${gap} 分钟，过于密集`,
@@ -81,8 +92,8 @@ export function useRiskDetection(
       }
     });
 
-    if (sortedByOrder.length > 0) {
-      const lastNode = sortedByOrder[sortedByOrder.length - 1];
+    if (sortedByTime.length > 0) {
+      const lastNode = sortedByTime[sortedByTime.length - 1];
       const lastEndMinutes = parseTimeToMinutes(lastNode.startTime) + lastNode.durationMinutes;
       const lectureStartMinutes = parseTimeToMinutes(lectureInfo.startTime);
       const bufferMinutes = lectureInfo.bufferMinutes;
@@ -103,7 +114,7 @@ export function useRiskDetection(
     const timeIds = sortedByTime.map(n => n.id);
     const orderStr = orderIds.join(',');
     const timeStr = timeIds.join(',');
-    
+
     if (orderStr !== timeStr && sortedByOrder.length > 1) {
       const mismatchNodes: string[] = [];
       for (let i = 0; i < sortedByOrder.length; i++) {
@@ -124,7 +135,7 @@ export function useRiskDetection(
     return alerts;
   });
 
-  const hasOrderMismatch = computed(() => 
+  const hasOrderMismatch = computed(() =>
     risks.value.some(r => r.type === 'order_mismatch')
   );
 

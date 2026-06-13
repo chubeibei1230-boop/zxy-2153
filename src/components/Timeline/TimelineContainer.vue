@@ -16,9 +16,8 @@ const store = useTimelineStore();
 
 const selectedIds = ref<Set<string>>(new Set());
 const riskDetection = useRiskDetection(
-  store.timelineNodes.value,
-  store.lectureInfo,
-  (id) => store.timelineNodes.value.find(n => n.id === id)
+  () => store.timelineNodes.value,
+  () => store.lectureInfo
 );
 
 const filteredNodes = computed(() => {
@@ -31,21 +30,22 @@ const sortedNodesForDrag = computed({
   set: (value: TimelineNodeType[]) => {
     const fullList = [...store.timelineNodes.value].sort((a, b) => a.sortOrder - b.sortOrder);
     const filteredIds = new Set(filteredNodes.value.map(n => n.id));
-    
-    let sortIndex = 0;
+
     const newOrder: TimelineNodeType[] = [];
-    
-    fullList.forEach(node => {
+    let filteredIdx = 0;
+    let sortIndex = 0;
+
+    for (const node of fullList) {
       if (filteredIds.has(node.id)) {
-        const filteredNode = value.find(n => n.id === node.id);
-        if (filteredNode) {
-          newOrder.push({ ...filteredNode, sortOrder: sortIndex++ });
+        if (filteredIdx < value.length) {
+          newOrder.push({ ...value[filteredIdx], sortOrder: sortIndex++ });
+          filteredIdx++;
         }
       } else {
         newOrder.push({ ...node, sortOrder: sortIndex++ });
       }
-    });
-    
+    }
+
     store.updateSortOrder(newOrder);
   }
 });
