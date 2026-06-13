@@ -157,16 +157,26 @@ const overallStatus = computed(() => {
   const hasUnhandledErrorRisk = s.riskHandling.some(
     (r) => r.severity === 'error' && !r.handled
   );
+  const hasActiveErrorRisk = s.riskHandling.some((r) => r.severity === 'error');
   const hasDelayed = s.unfinishedItems.some((i) => i.status === 'delayed');
   const hasUnhandledRisk = s.riskHandling.some((r) => !r.handled);
 
-  if (s.completionRate === 100 && s.riskHandling.every((r) => r.handled)) {
+  if (s.completionRate === 100 && s.riskHandling.length === 0) {
     return {
       label: '全部完成',
       color: 'text-emerald-700',
       bg: 'bg-emerald-100',
       dot: 'bg-emerald-500',
       icon: CheckCircle,
+    };
+  }
+  if (s.completionRate === 100 && !hasUnhandledRisk) {
+    return {
+      label: hasActiveErrorRisk ? '风险已记录' : '风险已处理',
+      color: hasActiveErrorRisk ? 'text-amber-700' : 'text-sky-700',
+      bg: hasActiveErrorRisk ? 'bg-amber-100' : 'bg-sky-100',
+      dot: hasActiveErrorRisk ? 'bg-amber-500' : 'bg-sky-500',
+      icon: hasActiveErrorRisk ? AlertTriangle : CheckCircle,
     };
   }
   if (hasUnhandledErrorRisk || hasDelayed) {
@@ -298,9 +308,9 @@ function handlePrint() {
 }
 
 function handleToggleRisk(riskKey: string) {
+  const wasHandled = props.isRiskHandled?.(riskKey) ?? false;
   emit('toggle-risk-handled', riskKey);
-  const isHandled = props.isRiskHandled?.(riskKey);
-  showToast('info', isHandled ? '已取消标记' : '已标记为处理');
+  showToast('info', wasHandled ? '已取消标记' : '已标记为处理');
 }
 
 function dismissToast(id: number) {
@@ -479,7 +489,7 @@ function dismissToast(id: number) {
                   {{ item.count }}
                 </span>
                 <span class="text-sm text-slate-500">项</span>
-                <span class="ml-auto text-xs font-medium px-2 py-0.5 rounded-full" :class="statusBgColors[item.status], statusColors[item.status]">
+                <span class="ml-auto text-xs font-medium px-2 py-0.5 rounded-full" :class="[statusBgColors[item.status], statusColors[item.status]]">
                   {{ item.percentage }}%
                 </span>
               </div>

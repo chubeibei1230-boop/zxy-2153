@@ -12,7 +12,7 @@ export function createTimelineStore() {
     bufferMinutes: 30,
   });
 
-  const reviewNotes = ref('');
+  const reviewNotes = ref(localStorage.getItem('lecture-review-notes') || '');
   const handledRiskKeys = ref<Set<string>>(new Set());
 
   const timelineNodes = ref<TimelineNode[]>([
@@ -256,8 +256,16 @@ export function createTimelineStore() {
     return handledRiskKeys.value.has(riskKey);
   }
 
+  function pruneHandledRiskKeys(activeKeys: string[]) {
+    const activeKeySet = new Set(activeKeys);
+    handledRiskKeys.value = new Set(
+      Array.from(handledRiskKeys.value).filter(key => activeKeySet.has(key))
+    );
+  }
+
   function setReviewNotes(notes: string) {
     reviewNotes.value = notes;
+    localStorage.setItem('lecture-review-notes', notes);
   }
 
   return {
@@ -282,6 +290,7 @@ export function createTimelineStore() {
     shiftTimeFromNode,
     toggleRiskHandled,
     isRiskHandled,
+    pruneHandledRiskKeys,
     setReviewNotes,
   };
 }

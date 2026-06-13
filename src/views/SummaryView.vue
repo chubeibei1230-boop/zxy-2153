@@ -40,6 +40,14 @@ watch(
   }
 );
 
+watch(
+  () => risks.value.map((risk) => risk.key).join('|'),
+  () => {
+    props.timelineStore.pruneHandledRiskKeys(risks.value.map((risk) => risk.key));
+  },
+  { immediate: true }
+);
+
 function handleNotesChange(val: string) {
   localNotes.value = val;
   props.timelineStore.setReviewNotes(val);
@@ -50,7 +58,12 @@ function handleToggleRiskHandled(riskKey: string) {
 }
 
 function goBack() {
-  router.back();
+  const backPath = router.options.history.state.back;
+  if (typeof backPath === 'string' && backPath.startsWith('/')) {
+    router.back();
+  } else {
+    router.push('/overview');
+  }
 }
 
 function goToOverview() {
