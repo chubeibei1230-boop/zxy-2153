@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import type {
   HandoverSummary,
   LectureInfo,
@@ -8,20 +8,21 @@ import type {
 } from '@/types';
 import { STATUS_LABELS } from '@/types';
 import { addMinutesToTime, parseTimeToMinutes } from '@/utils/timeUtils';
+import type { TimelineStore } from './useTimeline';
 
 export function useSummary(
   getLectureInfo: () => LectureInfo,
   getNodes: () => TimelineNode[],
-  getRisks: () => RiskAlert[]
+  getRisks: () => RiskAlert[],
+  getTimelineStore: () => TimelineStore
 ) {
-  const reviewNotes = ref('');
-
   const statusOrder: NodeStatus[] = ['not_started', 'in_preparation', 'completed', 'delayed'];
 
   const summary = computed<HandoverSummary>(() => {
     const lectureInfo = getLectureInfo();
     const nodes = getNodes();
     const risks = getRisks();
+    const store = getTimelineStore();
 
     const totalTasks = nodes.length;
     const completedTasks = nodes.filter((n) => n.status === 'completed').length;
@@ -111,9 +112,9 @@ export function useSummary(
         .filter((n): n is TimelineNode => !!n);
       const relatedNodeNames = relatedNodes.map((n) => n.name);
       const relatedStatuses = relatedNodes.map((n) => n.status);
-      const handled = relatedNodes.length > 0 && relatedNodes.every((n) => n.status === 'completed');
+      const handled = store.isRiskHandled(risk.key);
       return {
-        id: risk.id,
+        id: risk.key,
         type: risk.type,
         message: risk.message,
         severity: risk.severity,
@@ -143,15 +144,11 @@ export function useSummary(
       unfinishedItems,
       personDistribution,
       riskHandling,
-      reviewNotes: reviewNotes.value,
+      reviewNotes: store.reviewNotes.value,
     };
   });
 
-  function setReviewNotes(notes: string) {
-    reviewNotes.value = notes;
-  }
-
-  function generatePlainText(): string {
+  function generatePlainText(reviewNotesText: string): string {
     const s = summary.value;
     const lines: string[] = [];
 
@@ -179,7 +176,8 @@ export function useSummary(
     } else {
       s.unfinishedItems.forEach((item, idx) => {
         lines.push(`  ${idx + 1}. [${STATUS_LABELS[item.status]}] ${item.name}`);
-        lines.push(`     时间：${item.startTime}（${item.durationMinutes}分钟）`);
+        const endTime = addMinutesToTime(item.startTime, item.durationMinutes);
+        lines.push(`     时间：${item.startTime} - ${endTime}（${item.durationMinutes}分钟）`);
         lines.push(`     负责人：${item.personInCharge || '未指定'}`);
         if (item.requiredItems.length > 0) {
           lines.push(`     所需物品：${item.requiredItems.join('、')}`);
@@ -206,9 +204,9 @@ export function useSummary(
       lines.push('  ✓ 无风险提醒');
     } else {
       const handledCount = s.riskHandling.filter((r) => r.handled).length;
-      lines.push(`  总计 ${s.riskHandling.length} 项风险，已处理 ${handledCount} 项`);
+      lines.push(`  总计 ${s.riskHandling.length} 项风险，已标记处理 ${handledCount} 项`);
       s.riskHandling.forEach((risk, idx) => {
-        const tag = risk.handled ? '✓ 已处理' : '⚠ 待处理';
+        const tag = risk.handled ? '✓ 已标记处理' : '⚠ 待关注';
         const sevTag = risk.severity === 'error' ? '【严重】' : '【警告】';
         lines.push(`  ${idx + 1}. ${sevTag} ${tag} - ${risk.message}`);
         if (risk.relatedNodeNames.length > 0) {
@@ -218,7 +216,7 @@ export function useSummary(
     }
     lines.push('');
     lines.push(`【复盘备注】`);
-    lines.push(s.reviewNotes || '  （暂无备注，可补充填写）');
+    lines.push(reviewNotesText || '  （暂无备注，可补充填写）');
     lines.push('');
     lines.push('═══════════════════════════════════════════');
 
@@ -227,8 +225,6 @@ export function useSummary(
 
   return {
     summary,
-    reviewNotes,
-    setReviewNotes,
     generatePlainText,
   };
 }

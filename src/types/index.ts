@@ -22,6 +22,7 @@ export interface LectureInfo {
 
 export interface RiskAlert {
   id: string;
+  key: string;
   type: RiskType;
   message: string;
   relatedNodeIds: string[];

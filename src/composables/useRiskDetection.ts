@@ -1,6 +1,5 @@
 import { computed } from 'vue';
 import type { RiskAlert, TimelineNode, LectureInfo } from '@/types';
-import { generateUUID } from '@/utils/uuid';
 import { parseTimeToMinutes, getEndTime, isTimeOverlap, getTimeGap } from '@/utils/timeUtils';
 
 const PERSON_GAP_THRESHOLD = 10;
@@ -20,11 +19,11 @@ export function useRiskDetection(
 
     const seen = new Set<string>();
 
-    function addAlert(alert: Omit<RiskAlert, 'id'>) {
+    function addAlert(alert: Omit<RiskAlert, 'id' | 'key'>) {
       const key = `${alert.type}-${alert.relatedNodeIds.slice().sort().join(',')}`;
       if (!seen.has(key)) {
         seen.add(key);
-        alerts.push({ ...alert, id: generateUUID() });
+        alerts.push({ ...alert, id: key, key });
       }
     }
 

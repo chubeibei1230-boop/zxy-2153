@@ -20,6 +20,8 @@ import {
   RefreshCw,
   User,
   Printer,
+  X,
+  Info,
 } from 'lucide-vue-next';
 import type { HandoverSummary, NodeStatus, RiskType } from '@/types';
 import { STATUS_LABELS, RISK_TYPE_LABELS } from '@/types';
@@ -28,17 +30,34 @@ import { getTimeDisplay } from '@/utils/timeUtils';
 const props = defineProps<{
   summary: HandoverSummary;
   reviewNotes: string;
+  isRiskHandled?: (key: string) => boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:reviewNotes', value: string): void;
+  (e: 'toggle-risk-handled', riskKey: string): void;
 }>();
 
 const expandedSections = ref<Set<string>>(
   new Set(['status', 'unfinished', 'person', 'risk', 'notes'])
 );
 
-const copied = ref(false);
+type ToastType = 'success' | 'error' | 'info';
+interface ToastItem {
+  id: number;
+  type: ToastType;
+  message: string;
+}
+const toasts = ref<ToastItem[]>([]);
+let toastIdCounter = 0;
+
+function showToast(type: ToastType, message: string) {
+  const id = ++toastIdCounter;
+  toasts.value.push({ id, type, message });
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((t) => t.id !== id);
+  }, 2500);
+}
 
 function toggleSection(section: string) {
   if (expandedSections.value.has(section)) {
@@ -112,7 +131,7 @@ const overallStatus = computed(() => {
   }
   if (hasUnhandledRisk) {
     return {
-      label: '有风险待处理',
+      label: '有风险待关注',
       color: 'text-amber-700',
       bg: 'bg-amber-100',
       dot: 'bg-amber-500',
@@ -135,13 +154,14 @@ const handledRiskCount = computed(() =>
 async function copyToClipboard() {
   try {
     const text = generateCopyText();
+    if (!navigator.clipboard) {
+      throw new Error('当前浏览器不支持 Clipboard API');
+    }
     await navigator.clipboard.writeText(text);
-    copied.value = true;
-    setTimeout(() => {
-      copied.value = false;
-    }, 2000);
+    showToast('success', '摘要已复制到剪贴板');
   } catch (err) {
     console.error('复制失败:', err);
+    showToast('error', '复制失败，请手动选中复制');
   }
 }
 
@@ -201,9 +221,9 @@ function generateCopyText(): string {
   if (s.riskHandling.length === 0) {
     lines.push('  ✓ 无风险提醒');
   } else {
-    lines.push(`  总计 ${s.riskHandling.length} 项风险，已处理 ${handledRiskCount.value} 项`);
+    lines.push(`  总计 ${s.riskHandling.length} 项风险，已标记处理 ${handledRiskCount.value} 项`);
     s.riskHandling.forEach((risk, idx) => {
-      const tag = risk.handled ? '✓ 已处理' : '⚠ 待处理';
+      const tag = risk.handled ? '✓ 已标记处理' : '⚠ 待关注';
       const sevTag = risk.severity === 'error' ? '【严重】' : '【警告】';
       lines.push(`  ${idx + 1}. ${sevTag} ${tag} - ${risk.message}`);
       if (risk.relatedNodeNames.length > 0) {
@@ -221,12 +241,52 @@ function generateCopyText(): string {
 }
 
 function handlePrint() {
-  window.print();
+  try {
+    window.print();
+  } catch (err) {
+    showToast('error', '打印功能调用失败');
+  }
+}
+
+function handleToggleRisk(riskKey: string) {
+  emit('toggle-risk-handled', riskKey);
+  const isHandled = props.isRiskHandled?.(riskKey);
+  showToast('info', isHandled ? '已取消标记' : '已标记为处理');
+}
+
+function dismissToast(id: number) {
+  toasts.value = toasts.value.filter((t) => t.id !== id);
 }
 </script>
 
 <template>
   <div class="space-y-5">
+    <div class="fixed top-20 right-4 z-50 space-y-2 pointer-events-none">
+      <TransitionGroup name="toast">
+        <div
+          v-for="toast in toasts"
+          :key="toast.id"
+          class="pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border min-w-[240px] max-w-sm"
+          :class="{
+            'bg-emerald-50 border-emerald-200 text-emerald-800': toast.type === 'success',
+            'bg-red-50 border-red-200 text-red-800': toast.type === 'error',
+            'bg-sky-50 border-sky-200 text-sky-800': toast.type === 'info',
+          }"
+        >
+          <CheckCircle v-if="toast.type === 'success'" :size="18" class="flex-shrink-0" />
+          <AlertCircle v-else-if="toast.type === 'error'" :size="18" class="flex-shrink-0" />
+          <Info v-else :size="18" class="flex-shrink-0" />
+          <span class="text-sm flex-1">{{ toast.message }}</span>
+          <button
+            class="text-current/60 hover:text-current transition-colors"
+            @click="dismissToast(toast.id)"
+          >
+            <X :size="14" />
+          </button>
+        </div>
+      </TransitionGroup>
+    </div>
+
     <div class="card overflow-hidden">
       <div class="bg-gradient-to-r from-primary-700 to-primary-600 px-5 sm:px-6 py-5 text-white">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -312,11 +372,11 @@ function handlePrint() {
           </button>
           <button
             class="btn btn-primary gap-1.5 text-sm"
-            :class="copied ? 'bg-emerald-600 hover:bg-emerald-700' : ''"
+            :class="toasts.some(t => t.type === 'success') ? 'bg-emerald-600 hover:bg-emerald-700' : ''"
             @click="copyToClipboard"
           >
-            <component :is="copied ? Check : Copy" :size="14" />
-            {{ copied ? '已复制' : '复制全文' }}
+            <component :is="toasts.some(t => t.type === 'success') ? Check : Copy" :size="14" />
+            {{ toasts.some(t => t.type === 'success') ? '已复制' : '复制全文' }}
           </button>
         </div>
       </div>
@@ -641,7 +701,7 @@ function handlePrint() {
             <p class="text-xs text-slate-500 mt-0.5">
               {{ summary.riskHandling.length === 0
                 ? '未检测到风险'
-                : `共 ${summary.riskHandling.length} 项风险，已处理 ${handledRiskCount} 项` }}
+                : `共 ${summary.riskHandling.length} 项风险，已标记 ${handledRiskCount} 项处理` }}
             </p>
           </div>
         </div>
@@ -650,7 +710,7 @@ function handlePrint() {
             v-if="summary.riskHandling.length > 0 && handledRiskCount < summary.riskHandling.length"
             class="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700"
           >
-            {{ summary.riskHandling.length - handledRiskCount }} 待处理
+            {{ summary.riskHandling.length - handledRiskCount }} 待关注
           </span>
           <ChevronDown v-if="!expandedSections.has('risk')" :size="20" class="text-slate-400" />
           <ChevronUp v-else :size="20" class="text-slate-400" />
@@ -672,9 +732,9 @@ function handlePrint() {
           <div
             v-for="(risk, idx) in summary.riskHandling"
             :key="risk.id"
-            class="px-5 sm:px-6 py-4 transition-colors"
+            class="px-5 sm:px-6 py-4 transition-colors group"
             :class="[
-              risk.handled ? 'hover:bg-slate-50' : risk.severity === 'error' ? 'bg-red-50/40' : 'bg-amber-50/40'
+              risk.handled ? 'bg-emerald-50/20 hover:bg-emerald-50/40' : risk.severity === 'error' ? 'bg-red-50/40' : 'bg-amber-50/40'
             ]"
           >
             <div class="flex items-start gap-4">
@@ -715,11 +775,11 @@ function handlePrint() {
                     ]"
                   >
                     <component :is="risk.handled ? CheckCircle : AlertCircle" :size="10" />
-                    {{ risk.handled ? '已处理' : '待处理' }}
+                    {{ risk.handled ? '已标记处理' : '待关注' }}
                   </span>
                 </div>
                 <p class="text-sm text-slate-700 leading-relaxed mb-2">{{ risk.message }}</p>
-                <div v-if="risk.relatedNodeNames.length > 0" class="flex flex-wrap gap-1.5">
+                <div v-if="risk.relatedNodeNames.length > 0" class="flex flex-wrap gap-1.5 mb-3">
                   <span class="text-[11px] text-slate-500">关联事项：</span>
                   <span
                     v-for="name in risk.relatedNodeNames"
@@ -729,6 +789,18 @@ function handlePrint() {
                     {{ name }}
                   </span>
                 </div>
+                <button
+                  class="text-xs px-3 py-1.5 rounded-md border transition-all hover:shadow-sm"
+                  :class="[
+                    risk.handled
+                      ? 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                  ]"
+                  @click="handleToggleRisk(risk.id)"
+                >
+                  <CheckCircle v-if="risk.handled" :size="12" class="inline mr-1" />
+                  {{ risk.handled ? '取消标记' : '标记为已处理' }}
+                </button>
               </div>
             </div>
           </div>
@@ -769,7 +841,7 @@ function handlePrint() {
             placeholder="请输入复盘备注，例如：本次接待中的亮点、需改进之处、下次注意事项、经验总结等..."
           />
           <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
-            <span>支持多行文本，内容将包含在复制的摘要中</span>
+            <span>支持多行文本，内容将包含在复制的摘要中并自动保存</span>
             <span>{{ reviewNotes.length }} 字</span>
           </div>
         </div>
@@ -777,3 +849,15 @@ function handlePrint() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.toast-enter-active,
+.toast-leave-active {
+  transition: all 0.3s ease;
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+</style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ArrowLeft, FileText, RefreshCw } from 'lucide-vue-next';
 import type { TimelineStore } from '@/composables/useTimeline';
@@ -22,11 +22,32 @@ const riskDetection = useRiskDetection(
 
 const risks = computed(() => riskDetection.risks.value);
 
-const { summary, reviewNotes, setReviewNotes } = useSummary(
+const { summary, generatePlainText } = useSummary(
   () => props.timelineStore.lectureInfo,
   () => props.timelineStore.timelineNodes.value,
-  () => risks.value
+  () => risks.value,
+  () => props.timelineStore
 );
+
+const localNotes = ref(props.timelineStore.reviewNotes.value);
+
+watch(
+  () => props.timelineStore.reviewNotes.value,
+  (val) => {
+    if (val !== localNotes.value) {
+      localNotes.value = val;
+    }
+  }
+);
+
+function handleNotesChange(val: string) {
+  localNotes.value = val;
+  props.timelineStore.setReviewNotes(val);
+}
+
+function handleToggleRiskHandled(riskKey: string) {
+  props.timelineStore.toggleRiskHandled(riskKey);
+}
 
 function goBack() {
   router.back();
@@ -35,6 +56,14 @@ function goBack() {
 function goToOverview() {
   router.push('/overview');
 }
+
+function generateText(): string {
+  return generatePlainText(localNotes.value);
+}
+
+defineExpose({
+  generateText,
+});
 </script>
 
 <template>
@@ -80,8 +109,10 @@ function goToOverview() {
     <div class="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
       <HandoverSummary
         :summary="summary"
-        :review-notes="reviewNotes"
-        @update:review-notes="setReviewNotes"
+        :review-notes="localNotes"
+        :is-risk-handled="(key: string) => timelineStore.isRiskHandled(key)"
+        @update:review-notes="handleNotesChange"
+        @toggle-risk-handled="handleToggleRiskHandled"
       />
     </div>
   </div>

@@ -12,6 +12,9 @@ export function createTimelineStore() {
     bufferMinutes: 30,
   });
 
+  const reviewNotes = ref('');
+  const handledRiskKeys = ref<Set<string>>(new Set());
+
   const timelineNodes = ref<TimelineNode[]>([
     {
       id: generateUUID(),
@@ -241,12 +244,30 @@ export function createTimelineStore() {
     }
   }
 
+  function toggleRiskHandled(riskKey: string) {
+    if (handledRiskKeys.value.has(riskKey)) {
+      handledRiskKeys.value.delete(riskKey);
+    } else {
+      handledRiskKeys.value.add(riskKey);
+    }
+  }
+
+  function isRiskHandled(riskKey: string): boolean {
+    return handledRiskKeys.value.has(riskKey);
+  }
+
+  function setReviewNotes(notes: string) {
+    reviewNotes.value = notes;
+  }
+
   return {
     lectureInfo,
     timelineNodes,
     sortedNodes,
     allPersons,
     expandedNodeIds,
+    reviewNotes,
+    handledRiskKeys,
     addNode,
     duplicateLastNode,
     updateNode,
@@ -259,6 +280,9 @@ export function createTimelineStore() {
     addItemToNode,
     removeItemFromNode,
     shiftTimeFromNode,
+    toggleRiskHandled,
+    isRiskHandled,
+    setReviewNotes,
   };
 }
 
