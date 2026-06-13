@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { Calendar, ListTodo, Settings, Plus, Copy } from 'lucide-vue-next';
+import { Calendar, ListTodo, Settings, Plus, Copy, LayoutDashboard } from 'lucide-vue-next';
 import { useTimelineStore } from '@/composables/useTimeline';
 
 const route = useRoute();
@@ -8,6 +8,7 @@ const store = useTimelineStore();
 
 const navItems = [
   { path: '/', label: '流程编排', icon: Calendar },
+  { path: '/overview', label: '指挥总览', icon: LayoutDashboard },
   { path: '/execution', label: '现场执行', icon: ListTodo },
 ];
 
