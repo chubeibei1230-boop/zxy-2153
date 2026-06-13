@@ -41,12 +41,29 @@ const currentTime = computed(() => {
 });
 
 function getNextStatus(current: NodeStatus): NodeStatus {
-  const flow: NodeStatus[] = ['not_started', 'in_preparation', 'completed'];
-  const currentIndex = flow.indexOf(current);
-  if (currentIndex < flow.length - 1) {
-    return flow[currentIndex + 1];
+  if (current === 'delayed') {
+    return 'completed';
+  }
+  if (current === 'not_started') {
+    return 'in_preparation';
+  }
+  if (current === 'in_preparation') {
+    return 'completed';
   }
   return current;
+}
+
+function getButtonLabel(status: NodeStatus): string {
+  if (status === 'delayed') {
+    return '标记完成';
+  }
+  if (status === 'not_started') {
+    return '开始准备';
+  }
+  if (status === 'in_preparation') {
+    return '标记完成';
+  }
+  return '已完成';
 }
 
 function advanceStatus(node: TimelineNode) {
@@ -180,7 +197,7 @@ const statusColors: Record<NodeStatus, string> = {
                       ]"
                       @click="advanceStatus(node)"
                     >
-                      {{ node.status === 'not_started' ? '开始准备' : '标记完成' }}
+                      {{ getButtonLabel(node.status) }}
                       <ChevronRight :size="16" />
                     </button>
                   </div>

@@ -70,6 +70,12 @@ onUnmounted(() => {
 const lectureInfo = computed(() => props.timelineStore.lectureInfo);
 const allNodes = computed(() => props.timelineStore.timelineNodes.value);
 
+const filteredNodes = computed(() => {
+  return props.filterStore.applyFilters(allNodes.value, props.risks);
+});
+
+const filteredNodeIds = computed(() => new Set(filteredNodes.value.map(n => n.id)));
+
 const statusCounts = computed(() => {
   const counts: Record<NodeStatus, number> = {
     not_started: 0,
@@ -77,13 +83,13 @@ const statusCounts = computed(() => {
     completed: 0,
     delayed: 0,
   };
-  allNodes.value.forEach(node => {
+  filteredNodes.value.forEach(node => {
     counts[node.status]++;
   });
   return counts;
 });
 
-const totalNodes = computed(() => allNodes.value.length);
+const totalNodes = computed(() => filteredNodes.value.length);
 
 const progressPercent = computed(() => {
   if (totalNodes.value === 0) return 0;
@@ -92,10 +98,6 @@ const progressPercent = computed(() => {
 
 const deadlineTime = computed(() => {
   return addMinutesToTime(lectureInfo.value.startTime, -lectureInfo.value.bufferMinutes);
-});
-
-const filteredNodes = computed(() => {
-  return props.filterStore.applyFilters(allNodes.value, props.risks);
 });
 
 const hasActiveFilters = computed(() => props.filterStore.hasActiveFilters.value);
@@ -121,11 +123,18 @@ const riskIcons: Record<RiskType, any> = {
   order_mismatch: ArrowRightLeft,
 };
 
-const errorCount = computed(() => props.risks.filter(r => r.severity === 'error').length);
-const warningCount = computed(() => props.risks.filter(r => r.severity === 'warning').length);
+const filteredRisks = computed(() => {
+  const ids = filteredNodeIds.value;
+  return props.risks.filter(risk =>
+    risk.relatedNodeIds.some(nodeId => ids.has(nodeId))
+  );
+});
+
+const errorCount = computed(() => filteredRisks.value.filter(r => r.severity === 'error').length);
+const warningCount = computed(() => filteredRisks.value.filter(r => r.severity === 'warning').length);
 
 const displayedRisks = computed(() => {
-  return [...props.risks]
+  return [...filteredRisks.value]
     .sort((a, b) => {
       if (a.severity === 'error' && b.severity !== 'error') return -1;
       if (b.severity === 'error' && a.severity !== 'error') return 1;

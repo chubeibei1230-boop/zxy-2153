@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import {
   ChevronRight,
@@ -91,6 +91,25 @@ function goToTimeline() {
 function goToExecution() {
   router.push('/execution');
 }
+
+function handleLocateNode(nodeId: string) {
+  const nodeExists = filteredNodes.value.some(n => n.id === nodeId);
+  if (!nodeExists) {
+    props.filterStore.clearFilters();
+  }
+  nextTick(() => {
+    setTimeout(() => {
+      const element = document.querySelector(`[data-node-id="${nodeId}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-primary-400', 'ring-offset-2');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-primary-400', 'ring-offset-2');
+        }, 2500);
+      }
+    }, 50);
+  });
+}
 </script>
 
 <template>
@@ -99,7 +118,7 @@ function goToExecution() {
       :timeline-store="timelineStore"
       :filter-store="filterStore"
       :risks="risks"
-      @locate-node="() => {}"
+      @locate-node="handleLocateNode"
     />
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
@@ -148,6 +167,7 @@ function goToExecution() {
         <div
           v-for="node in filteredNodes"
           :key="node.id"
+          :data-node-id="node.id"
           class="card overflow-hidden transition-all duration-200 hover:shadow-md"
           :class="{
             'border-l-4 border-l-emerald-500': node.status === 'completed',
