@@ -20,7 +20,8 @@ import {
   Gauge,
   Zap,
   Flag,
-  RefreshCw
+  RefreshCw,
+  FileText
 } from 'lucide-vue-next';
 import type { TimelineStore } from '@/composables/useTimeline';
 import type { FilterStore } from '@/composables/useFilters';
@@ -37,6 +38,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'locate-node', nodeId: string): void;
   (e: 'toggle-visibility'): void;
+  (e: 'go-summary'): void;
 }>();
 
 const expandedSections = ref<Set<string>>(new Set(['pending', 'delayed', 'risks']));
@@ -255,6 +257,14 @@ const itemsSummary = computed(() => {
           <span class="w-1.5 h-1.5 rounded-full animate-pulse-soft" :class="overallStatus.dot" />
           {{ overallStatus.label }}
         </span>
+        <button
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-white/20 hover:bg-white/30 text-white transition-colors"
+          @click="emit('go-summary')"
+        >
+          <FileText :size="14" />
+          <span class="hidden sm:inline">交接摘要</span>
+          <span class="sm:hidden">摘要</span>
+        </button>
         <button
           class="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors lg:hidden"
           @click="emit('toggle-visibility')"

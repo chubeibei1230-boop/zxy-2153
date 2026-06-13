@@ -146,7 +146,14 @@ const statusColors: Record<NodeStatus, string> = {
           <CheckCircle :size="32" class="text-emerald-600" />
         </div>
         <h3 class="text-lg font-semibold text-slate-800 mb-2">所有事项已完成！</h3>
-        <p class="text-slate-500">太棒了，今天的接待工作已经全部完成</p>
+        <p class="text-slate-500 mb-6">太棒了，今天的接待工作已经全部完成</p>
+        <button
+          class="btn gap-2 px-6 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm hover:shadow"
+          @click="router.push('/summary')"
+        >
+          <FileText :size="16" />
+          生成交接复盘摘要
+        </button>
       </div>
 
       <div v-else class="space-y-4">

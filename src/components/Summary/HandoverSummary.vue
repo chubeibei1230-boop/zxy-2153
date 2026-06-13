@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import {
   Calendar,
   Clock,
@@ -41,6 +41,55 @@ const emit = defineEmits<{
 const expandedSections = ref<Set<string>>(
   new Set(['status', 'unfinished', 'person', 'risk', 'notes'])
 );
+
+const refreshTick = ref(0);
+let refreshInterval: number | null = null;
+
+onMounted(() => {
+  refreshInterval = window.setInterval(() => {
+    refreshTick.value++;
+  }, 60000);
+});
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+  }
+});
+
+function parseGeneratedAt(): Date {
+  // generatedAt格式: "YYYY-MM-DD HH:mm"
+  const parts = props.summary.generatedAt.split(' ');
+  if (parts.length === 2) {
+    const datePart = parts[0].split('-').map(Number);
+    const timePart = parts[1].split(':').map(Number);
+    return new Date(
+      datePart[0],
+      datePart[1] - 1,
+      datePart[2],
+      timePart[0],
+      timePart[1]
+    );
+  }
+  return new Date();
+}
+
+const relativeTime = computed(() => {
+  // 触发响应式依赖
+  void refreshTick.value;
+  
+  const genTime = parseGeneratedAt();
+  const now = new Date();
+  const diffMs = now.getTime() - genTime.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  
+  if (diffSec < 60) return '刚刚生成';
+  if (diffMin < 60) return `${diffMin} 分钟前更新`;
+  if (diffHr < 24) return `${diffHr} 小时前更新`;
+  return '今日更新';
+});
 
 type ToastType = 'success' | 'error' | 'info';
 interface ToastItem {
@@ -296,9 +345,14 @@ function dismissToast(id: number) {
             </div>
             <div class="min-w-0">
               <h1 class="text-xl sm:text-2xl font-bold mb-1">讲座接待方案 — 复盘与交接摘要</h1>
-              <p class="text-sm text-white/80 flex items-center gap-1.5">
+              <p class="text-sm text-white/80 flex items-center gap-1.5 flex-wrap">
                 <Clock :size="14" />
-                生成时间：{{ summary.generatedAt }}
+                <span>生成时间：{{ summary.generatedAt }}</span>
+                <span class="text-white/60">·</span>
+                <span class="flex items-center gap-1">
+                  <RefreshCw :size="12" />
+                  {{ relativeTime }}
+                </span>
               </p>
             </div>
           </div>

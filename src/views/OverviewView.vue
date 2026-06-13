@@ -120,6 +120,7 @@ function handleLocateNode(nodeId: string) {
       :filter-store="filterStore"
       :risks="risks"
       @locate-node="handleLocateNode"
+      @go-summary="router.push('/summary')"
     />
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
