@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { 
   Clock, User, Package, StickyNote, CheckCircle, PlayCircle, 
-  AlertCircle, Circle, ChevronRight
+  AlertCircle, Circle, ChevronRight, FileText
 } from 'lucide-vue-next';
 import type { TimelineStore } from '@/composables/useTimeline';
 import type { FilterStore } from '@/composables/useFilters';
@@ -14,6 +15,8 @@ const props = defineProps<{
   timelineStore: TimelineStore;
   filterStore: FilterStore;
 }>();
+
+const router = useRouter();
 
 const pendingNodes = computed(() => {
   return [...props.timelineStore.timelineNodes.value]
@@ -97,9 +100,18 @@ const statusColors: Record<NodeStatus, string> = {
 <template>
   <div class="min-h-[calc(100vh-65px)] bg-slate-50">
     <div class="max-w-4xl mx-auto px-6 py-8">
-      <div class="mb-8">
-        <h1 class="text-2xl font-bold text-slate-800 mb-2">现场执行清单</h1>
-        <p class="text-slate-500">专注于当前需要处理的事项，按时间顺序执行</p>
+      <div class="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800 mb-2">现场执行清单</h1>
+          <p class="text-slate-500">专注于当前需要处理的事项，按时间顺序执行</p>
+        </div>
+        <button
+          class="btn gap-1.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm hover:shadow self-start"
+          @click="router.push('/summary')"
+        >
+          <FileText :size="16" />
+          生成交接摘要
+        </button>
       </div>
 
       <div class="grid grid-cols-4 gap-4 mb-8">

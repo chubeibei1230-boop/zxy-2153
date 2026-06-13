@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import { Calendar, ListTodo, Settings, Plus, Copy, LayoutDashboard } from 'lucide-vue-next';
+import { Calendar, ListTodo, Settings, Plus, Copy, LayoutDashboard, FileText } from 'lucide-vue-next';
 import { useTimelineStore } from '@/composables/useTimeline';
 
 const route = useRoute();
@@ -53,6 +53,18 @@ function handleDuplicateLast() {
             >
               <component :is="item.icon" :size="16" />
               {{ item.label }}
+            </router-link>
+            <router-link
+              to="/summary"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ml-1"
+              :class="[
+                route.path === '/summary'
+                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm'
+                  : 'bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 hover:from-primary-100 hover:to-primary-200'
+              ]"
+            >
+              <FileText :size="16" />
+              交接摘要
             </router-link>
           </nav>
         </div>

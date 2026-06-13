@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { PanelRight } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
+import { PanelRight, FileText } from 'lucide-vue-next';
 import type { TimelineStore } from '@/composables/useTimeline';
 import type { FilterStore } from '@/composables/useFilters';
 import { useRiskDetection } from '@/composables/useRiskDetection';
@@ -16,6 +17,7 @@ const props = defineProps<{
   filterStore: FilterStore;
 }>();
 
+const router = useRouter();
 const timelineRef = ref<InstanceType<typeof TimelineContainer> | null>(null);
 const riskSidebarVisible = ref(true);
 
@@ -60,7 +62,7 @@ watch(() => risks.value.length, () => {}, { deep: true });
         :all-persons="timelineStore.allPersons.value"
       />
 
-      <div class="flex items-center justify-between px-6 py-3 bg-slate-50 border-b border-slate-200">
+      <div class="flex items-center justify-between flex-wrap gap-3 px-4 sm:px-6 py-3 bg-slate-50 border-b border-slate-200">
         <div class="flex items-center gap-4">
           <h2 class="text-base font-semibold text-slate-800">接待流程时间线</h2>
           <span class="text-sm text-slate-500">
@@ -68,25 +70,34 @@ watch(() => risks.value.length, () => {}, { deep: true });
           </span>
         </div>
         
-        <button
-          class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
-          :class="[
-            riskSidebarVisible
-              ? 'bg-primary-100 text-primary-700'
-              : 'text-slate-600 hover:bg-slate-100'
-          ]"
-          @click="riskSidebarVisible = !riskSidebarVisible"
-        >
-          <PanelRight :size="16" />
-          风险面板
-          <span
-            v-if="risks.length > 0"
-            class="w-5 h-5 rounded-full text-white text-xs flex items-center justify-center"
-            :class="risks.some(r => r.severity === 'error') ? 'bg-red-500' : 'bg-amber-500'"
+        <div class="flex items-center gap-2 flex-wrap">
+          <button
+            class="btn gap-1.5 text-sm bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm hover:shadow"
+            @click="router.push('/summary')"
           >
-            {{ risks.length }}
-          </span>
-        </button>
+            <FileText :size="14" />
+            生成交接摘要
+          </button>
+          <button
+            class="flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors"
+            :class="[
+              riskSidebarVisible
+                ? 'bg-primary-100 text-primary-700'
+                : 'text-slate-600 hover:bg-slate-100'
+            ]"
+            @click="riskSidebarVisible = !riskSidebarVisible"
+          >
+            <PanelRight :size="16" />
+            风险面板
+            <span
+              v-if="risks.length > 0"
+              class="w-5 h-5 rounded-full text-white text-xs flex items-center justify-center"
+              :class="risks.some(r => r.severity === 'error') ? 'bg-red-500' : 'bg-amber-500'"
+            >
+              {{ risks.length }}
+            </span>
+          </button>
+        </div>
       </div>
 
       <div class="flex-1 overflow-y-auto scrollbar-thin p-6">

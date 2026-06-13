@@ -62,3 +62,59 @@ export const RISK_TYPE_LABELS: Record<RiskType, string> = {
   end_time_exceed: '超时风险',
   order_mismatch: '顺序不一致',
 };
+
+export interface StatusSummaryItem {
+  status: NodeStatus;
+  count: number;
+  percentage: number;
+}
+
+export interface UnfinishedItem {
+  id: string;
+  name: string;
+  startTime: string;
+  durationMinutes: number;
+  personInCharge: string;
+  status: NodeStatus;
+  notes: string;
+  requiredItems: string[];
+}
+
+export interface PersonTaskDistribution {
+  name: string;
+  total: number;
+  completed: number;
+  inPreparation: number;
+  notStarted: number;
+  delayed: number;
+  progress: number;
+  taskNames: string[];
+}
+
+export interface RiskHandlingItem {
+  id: string;
+  type: RiskType;
+  message: string;
+  severity: 'warning' | 'error';
+  relatedNodeNames: string[];
+  handled: boolean;
+  relatedStatuses: NodeStatus[];
+}
+
+export interface HandoverSummary {
+  lectureInfo: {
+    name: string;
+    startTime: string;
+    bufferMinutes: number;
+    deadlineTime: string;
+  };
+  generatedAt: string;
+  statusSummary: StatusSummaryItem[];
+  totalTasks: number;
+  completedTasks: number;
+  completionRate: number;
+  unfinishedItems: UnfinishedItem[];
+  personDistribution: PersonTaskDistribution[];
+  riskHandling: RiskHandlingItem[];
+  reviewNotes: string;
+}

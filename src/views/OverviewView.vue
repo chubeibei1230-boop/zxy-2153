@@ -11,7 +11,8 @@ import {
   CheckCircle,
   AlertCircle,
   ListTodo,
-  Filter
+  Filter,
+  FileText,
 } from 'lucide-vue-next';
 import type { TimelineStore } from '@/composables/useTimeline';
 import type { FilterStore } from '@/composables/useFilters';
@@ -131,7 +132,7 @@ function handleLocateNode(nodeId: string) {
             <span v-if="hasActiveFilters" class="text-primary-500">(已筛选)</span>
           </span>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <button
             class="btn btn-secondary gap-1.5 text-sm"
             @click="goToTimeline"
@@ -140,11 +141,18 @@ function handleLocateNode(nodeId: string) {
             流程编排
           </button>
           <button
-            class="btn btn-primary gap-1.5 text-sm"
+            class="btn btn-secondary gap-1.5 text-sm"
             @click="goToExecution"
           >
             <ListTodo :size="14" />
             现场执行
+          </button>
+          <button
+            class="btn gap-1.5 text-sm bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm hover:shadow"
+            @click="router.push('/summary')"
+          >
+            <FileText :size="14" />
+            生成交接摘要
           </button>
         </div>
       </div>
